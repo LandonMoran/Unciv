@@ -15,7 +15,9 @@ import com.unciv.models.UncivSound
 object AccessibilityAnnouncer {
     data class Announcement(val message: String, val earcon: UncivSound = UncivSound.Silent)
 
-    val announcementListeners = mutableListOf<(Announcement) -> Unit>()
+    // Copy-on-write: listeners are added once from the platform UI thread while
+    // announcements fire from the GL thread.
+    val announcementListeners = java.util.concurrent.CopyOnWriteArrayList<(Announcement) -> Unit>()
 
     fun announce(message: String, earcon: UncivSound = UncivSound.Silent) {
         if (message.isBlank()) return

@@ -12,13 +12,6 @@ data class UncivSound(
     private constructor() : this("")
 
     companion object {
-        val TalkBackSelect = UncivSound("talkback_select")
-        val TalkBackMove = UncivSound("talkback_move")
-        val TalkBackAttack = UncivSound("talkback_attack")
-        val TalkBackTurn = UncivSound("talkback_turn")
-        val TalkBackCity = UncivSound("talkback_city")
-        val TalkBackTech = UncivSound("talkback_tech")
-        val TalkBackError = UncivSound("talkback_error")
         val Bombard = UncivSound("bombard")
         val Chimes = UncivSound("chimes")
         val Choir = UncivSound("choir")
@@ -36,6 +29,13 @@ data class UncivSound(
         val Silent = UncivSound("")
         val Slider = UncivSound("slider")
         val Swap = UncivSound("swap")
+        val TalkBackAttack = UncivSound("talkback_attack")
+        val TalkBackCity = UncivSound("talkback_city")
+        val TalkBackError = UncivSound("talkback_error")
+        val TalkBackMove = UncivSound("talkback_move")
+        val TalkBackSelect = UncivSound("talkback_select")
+        val TalkBackTech = UncivSound("talkback_tech")
+        val TalkBackTurn = UncivSound("talkback_turn")
         val Upgrade = UncivSound("upgrade")
         val Whoosh = UncivSound("whoosh")
 
@@ -43,9 +43,10 @@ data class UncivSound(
         val builtInSounds = listOf(
             Bombard, Chimes, Choir, Click, Coin, Construction, Fire, Fortify,
             Notification1, Notification2, Paper, Policy, Promote, Setup, Silent,
-            Slider, Swap, Upgrade, Whoosh,
-            TalkBackSelect, TalkBackMove, TalkBackAttack, TalkBackTurn,
-            TalkBackCity, TalkBackTech, TalkBackError
+            Slider, Swap,
+            TalkBackAttack, TalkBackCity, TalkBackError, TalkBackMove,
+            TalkBackSelect, TalkBackTech, TalkBackTurn,
+            Upgrade, Whoosh
         )
     }
 }
