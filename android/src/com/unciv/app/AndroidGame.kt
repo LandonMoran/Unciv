@@ -92,8 +92,12 @@ class AndroidGame(private val activity: Activity) : UncivGame() {
     /** Attach the TalkBack screen-reader bridge to the game view. Safe to call even when no
      *  screen reader is running - the bridge stays idle until touch exploration is enabled. */
     fun setupTalkBackBridge() {
-        val gameView = (Gdx.graphics as AndroidGraphics).view
-        UncivAccessibilityBridge(gameView, this).attach()
+        try {
+            val gameView = (Gdx.graphics as AndroidGraphics).view
+            UncivAccessibilityBridge(gameView, this).attach()
+        } catch (_: Throwable) {
+            // Screen-reader support is optional: it must never crash startup.
+        }
     }
 
     fun isInitializedProxy() = super.isInitialized

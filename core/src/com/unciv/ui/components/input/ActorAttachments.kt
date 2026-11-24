@@ -14,9 +14,10 @@ internal class ActorAttachments private constructor(actor: Actor) {
 
         fun get(actor: Actor): ActorAttachments {
             (actor.userObject as? ActorAttachments)?.let { return it }
-            if (actor.userObject == null)
-                actor.userObject = ActorAttachments(actor)
-            return getOrNull(actor)!!
+            // Nothing else in the codebase or libGDX writes Actor.userObject, so a
+            // foreign non-null value here is unexpected; ActorAttachments owns this
+            // field (see AccessibilityLabels), so replace rather than crash on !!.
+            return ActorAttachments(actor).also { actor.userObject = it }
         }
     }
 

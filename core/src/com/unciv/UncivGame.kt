@@ -73,16 +73,27 @@ open class UncivGame(val isConsoleMode: Boolean = false) : Game(), PlatformSpeci
         private set
 
     /** Subscribers are notified (on the GL thread) whenever the visible screen changes.
-     *  Used by platform accessibility bridges (e.g. Android TalkBack support). */
-    val screenChangeListeners = mutableListOf<(BaseScreen) -> Unit>()
+     *  Used by platform accessibility bridges (e.g. Android TalkBack support).
+     *
+     *  Copy-on-write: platform bridges subscribe from the platform UI thread while
+     *  screens are set (and these iterated) on the GL thread. A plain ArrayList here
+     *  crashed startup with ConcurrentModificationException: the TalkBack bridge
+     *  subscribes in onCreate while the GL thread sets the first screen.
+     *  A listener must also never kill the GL thread, so each call is guarded. */
+    val screenChangeListeners = java.util.concurrent.CopyOnWriteArrayList<(BaseScreen) -> Unit>()
     /** Subscribers are notified (on the GL thread) whenever on-screen content changes -
      *  screen changes as well as popups opening or closing.
-     *  Used by platform accessibility bridges (e.g. Android TalkBack support). */
-    val accessibilityContentListeners = mutableListOf<() -> Unit>()
+     *  Used by platform accessibility bridges (e.g. Android TalkBack support).
+     *  Copy-on-write for the same UI-thread/GL-thread reason as [screenChangeListeners]. */
+    val accessibilityContentListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
     /** Notify [accessibilityContentListeners] that the visible UI changed. */
     fun notifyAccessibilityContentChanged() {
-        for (listener in accessibilityContentListeners.toList()) listener()
+        for (listener in accessibilityContentListeners) {
+            try {
+                listener()
+            } catch (_: Throwable) {}
+        }
     }
 
     /** Flag used only during initialization until the end of [create] */
@@ -310,7 +321,11 @@ open class UncivGame(val isConsoleMode: Boolean = false) : Game(), PlatformSpeci
             newScreen.shouldUpdate = true
         }
         Gdx.graphics.requestRendering()
-        for (listener in screenChangeListeners.toList()) listener(newScreen)
+        for (listener in screenChangeListeners) {
+            try {
+                listener(newScreen)
+            } catch (_: Throwable) {}
+        }
         notifyAccessibilityContentChanged()
     }
 

@@ -47,23 +47,38 @@ class UncivAccessibilityBridge(
     private val gameView: View,
     private val game: UncivGame
 ) {
-    private val helper = UncivExploreHelper(gameView)
+    // Created inside attach() so a linking failure can never crash the caller:
+    // the bridge constructor itself must be infallible (it runs in onCreate).
+    private var helper: UncivExploreHelper? = null
     private var lastSnapshotMs = 0L
     private var snapshotPending = false
     private var lastScreenTitle = "Unciv"
 
     fun attach() {
         try {
-        ViewCompat.setAccessibilityDelegate(gameView, helper)
-        gameView.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-        game.screenChangeListeners.add { screen -> onScreenChanged(screen) }
-        game.accessibilityContentListeners.add { onContentChanged() }
-        com.unciv.ui.accessibility.AccessibilityAnnouncer.announcementListeners.add { announcement ->
-            onExplicitAnnouncement(announcement.message, announcement.earcon)
-        }
-        onContentChanged()
+            val helper = UncivExploreHelper(gameView)
+            this.helper = helper
+            ViewCompat.setAccessibilityDelegate(gameView, helper)
+            gameView.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            game.screenChangeListeners.add { screen ->
+                try {
+                    onScreenChanged(screen)
+                } catch (_: Throwable) {}
+            }
+            game.accessibilityContentListeners.add {
+                try {
+                    onContentChanged()
+                } catch (_: Throwable) {}
+            }
+            com.unciv.ui.accessibility.AccessibilityAnnouncer.announcementListeners.add { announcement ->
+                try {
+                    onExplicitAnnouncement(announcement.message, announcement.earcon)
+                } catch (_: Throwable) {}
+            }
+            onContentChanged()
         } catch (_: Throwable) {
             // The accessibility bridge must never kill the game on startup.
+            helper = null
         }
     }
 
@@ -85,9 +100,18 @@ class UncivAccessibilityBridge(
 
     private fun isActive(): Boolean {
         if (!isEnabledInSettings()) return false
-        val manager = gameView.context.getSystemService(AccessibilityManager::class.java)
-            ?: return false
-        return manager.isEnabled && manager.isTouchExplorationEnabled
+        return try {
+            // getSystemService(Class) needs API 23+ but minSdk is 21: use the
+            // string-based lookup so API 21/22 devices can't NoSuchMethodError here.
+            // isActive runs on the GL thread via screen/content listeners, where an
+            // uncaught Error would kill the game right after the first screen shows.
+            @Suppress("DEPRECATION")
+            val manager = gameView.context.getSystemService(android.content.Context.ACCESSIBILITY_SERVICE)
+                as? AccessibilityManager ?: return false
+            manager.isEnabled && manager.isTouchExplorationEnabled
+        } catch (_: Throwable) {
+            false
+        }
     }
 
     private fun isEnabledInSettings(): Boolean = try {
@@ -98,13 +122,13 @@ class UncivAccessibilityBridge(
     }
 
     private fun onScreenChanged(screen: BaseScreen) {
-        if (!isActive()) return
+        if (helper == null || !isActive()) return
         lastScreenTitle = humanizeScreenName(screen)
         requestSnapshot(announce = lastScreenTitle)
     }
 
     private fun onContentChanged() {
-        if (!isActive()) return
+        if (helper == null || !isActive()) return
         requestSnapshot(announceFirstText = true)
     }
 
@@ -131,6 +155,7 @@ class UncivAccessibilityBridge(
             val stageWidth = stage.width
             val stageHeight = stage.height
             gameView.post {
+                val helper = helper ?: return@post
                 if (!isActive()) return@post
                 helper.update(entries, stageWidth, stageHeight)
                 if (announce != null) gameView.announceForAccessibility(announce)
