@@ -16,6 +16,8 @@ import com.unciv.models.ruleset.tile.TileImprovement
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.stats.Stat
 import com.unciv.models.translations.tr
+import com.unciv.ui.accessibility.AccessibilityAnnouncer
+import com.unciv.ui.accessibility.TileDescription
 import com.unciv.ui.audio.CityAmbiencePlayer
 import com.unciv.ui.audio.SoundPlayer
 import com.unciv.ui.components.ParticleEffectMapFireworks
@@ -480,6 +482,12 @@ class CityScreen(
 
     private fun tileGroupOnClick(tileGroup: CityTileGroup) {
         if (cityView.isPuppet()) return
+        try {
+            AccessibilityAnnouncer.announce(
+                TileDescription.describe(tileGroup.tileView, null),
+                UncivSound.TalkBackSelect
+            )
+        } catch (_: Throwable) {}
         val tileInfo = tileGroup.tileView
 
         /** [UniqueType.CreatesOneImprovement] support - select tile for improvement */

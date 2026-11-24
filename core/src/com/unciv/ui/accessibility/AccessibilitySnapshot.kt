@@ -19,7 +19,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.unciv.UncivGame
 import com.unciv.ui.components.input.ActorAttachments
-import com.unciv.ui.components.tilegroups.WorldTileGroup
+import com.unciv.ui.components.tilegroups.TileGroup
 import com.unciv.ui.popups.Popup
 import com.unciv.view.CivView
 
@@ -71,20 +71,23 @@ object AccessibilitySnapshot {
         private val consumed = HashSet<Actor>(512)
         private val point = Vector2()
         private var tileCount = 0
+        // Viewing civ for fog-of-war-aware descriptions. The world screen persists
+        // underneath modal screens (city, diplomacy, ...), so its civ stays valid
+        // even when the snapshot walks a different stage.
         private val viewingCiv: CivView? = try {
             if (UncivGame.isCurrentInitialized()) {
-                val ws = UncivGame.Current.worldScreen
-                if (ws != null && ws.stage === stage) {
-                    try { ws.selectedGameView.civView } catch (_: Throwable) { null }
-                } else null
+                try { UncivGame.Current.worldScreen?.selectedGameView?.civView } catch (_: Throwable) { null }
             } else null
         } catch (_: Throwable) { null }
 
         fun visit(actor: Actor, depth: Int) {
             if (!isEffectivelyVisible(actor) || actor in consumed || depth > 40) return
-            if (actor is WorldTileGroup) {
+            // World-map tiles and city-screen tiles alike: exposed with terrain/unit/city
+            // descriptions and activate-to-select. Layer internals are exposed through
+            // the TileMapLayer containers, not by recursing here.
+            if (actor is TileGroup) {
                 emitTile(actor)
-                return // TileGroup internals (layers) are not scene-graph children; nothing to recurse
+                return
             }
             val inPopup = isInPopup(actor)
             when (actor) {
@@ -436,7 +439,7 @@ object AccessibilitySnapshot {
             return true
         }
 
-        private fun emitTile(actor: WorldTileGroup) {
+        private fun emitTile(actor: TileGroup) {
             if (tileCount >= MAX_TILES) return
             val bounds = stageBounds(actor) ?: return
             // Only tiles intersecting the current viewport are useful to TalkBack

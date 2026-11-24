@@ -12,6 +12,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Value
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.UncivGame
+import com.unciv.models.translations.tr
+import com.unciv.ui.accessibility.AccessibilityLabels
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.ActivationTypes
 import com.unciv.ui.components.input.ClickableCircle
@@ -212,6 +214,7 @@ class ExpanderTab(
         check(toggleHitArea == null) { "You can only call Expander.toggleOnIconOnly once" }
         header.clearActivationActions(ActivationTypes.Tap)
         toggleHitArea = ClickableCircle(header.height).apply {
+            AccessibilityLabels.setLabel(this, "Expand or collapse".tr())
             onActivation { toggle() }
         }
         header.addActor(toggleHitArea)

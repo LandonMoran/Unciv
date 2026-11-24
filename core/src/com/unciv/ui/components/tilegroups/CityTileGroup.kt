@@ -9,6 +9,7 @@ import com.unciv.view.CivView
 import com.unciv.view.TileView
 import com.unciv.models.stats.Stat
 import com.unciv.models.translations.tr
+import com.unciv.ui.accessibility.AccessibilityLabels
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.components.extensions.addToCenter
 import com.unciv.ui.components.extensions.darken
@@ -141,6 +142,17 @@ class CityTileGroup(val cityView: CityView, tileView: TileView, tileSetStrings: 
             // Position absolutely: tile origin (x,y) + tile-local offset
             icon.setPosition(x + width/2 - icon.width/2, y + height*0.85f - icon.height/2)
             layerMisc.addWorkedIcon(icon)
+            // Screen-reader label for the worked/buy tile icon (activated = work/stop/buy)
+            val iconLabel = when {
+                tileState == CityTileState.PURCHASABLE -> "Buy tile".tr()
+                tileView.isCityCenter() -> "City center".tr()
+                tileView.isLocked() -> "Locked tile".tr()
+                tileView.isWorked() -> "Worked tile".tr()
+                tileView.isBlockaded() -> "Blockaded tile".tr()
+                tileState == CityTileState.WORKABLE -> "Unworked tile".tr()
+                else -> null
+            }
+            if (iconLabel != null) AccessibilityLabels.setLabel(icon, iconLabel)
         }
 
         // No unit flags and city-buttons inside CityScreen
