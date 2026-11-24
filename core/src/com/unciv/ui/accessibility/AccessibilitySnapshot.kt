@@ -18,6 +18,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.unciv.UncivGame
+import com.unciv.ui.components.input.ActorAttachments
 import com.unciv.ui.components.tilegroups.WorldTileGroup
 import com.unciv.ui.popups.Popup
 import com.unciv.view.CivView
@@ -28,7 +29,7 @@ import com.unciv.view.CivView
  * The actor reference must only be touched on the GL thread, e.g. to synthesize a tap
  * when the screen reader user activates the node.
  */
-data class AccessibleEntry(val node: AccessibilityNode, val actor: Actor)
+data class AccessibleEntry(val node: AccessibilityNode, val actor: Actor, val isPopup: Boolean = false)
 
 /**
  * Walks a libGDX [Stage] and builds a flat list of screen-reader-focusable elements.
@@ -193,12 +194,29 @@ object AccessibilitySnapshot {
             var hops = 0
             while (current != null && hops < 6) {
                 if (current.listeners.any { it is ClickListener }) return true
+                // Modern tap handling: onActivation/onClick attach an ActivationListener
+                // (a gesture listener, not a ClickListener) via ActorAttachments
+                if (ActorAttachments.getOrNull(current)?.activationActions?.isNotEmpty() == true) return true
                 // Container-holder pattern: holder has the listener, button doesn't
                 if (current is Group && current.listeners.size > 0) return true
                 current = current.parent
                 hops++
             }
             return actor.listeners.any { it is ClickListener }
+        }
+
+        /** Nearest human-readable label on [actor] itself or its ancestors.
+         *  Icon images inside a labeled clickable holder (menu button, map toggles, ...)
+         *  would otherwise be announced as a bare "Button". */
+        private fun ancestorLabel(actor: Actor): String? {
+            var current: Actor? = actor
+            var hops = 0
+            while (current != null && hops < 6) {
+                AccessibilityLabels.inferLabel(current)?.let { return it }
+                current = current.parent
+                hops++
+            }
+            return null
         }
 
         /** Text of all descendant labels, used for buttons and consumed so labels aren't read twice. */
@@ -250,18 +268,18 @@ object AccessibilitySnapshot {
         }
 
         private fun addNode(node: AccessibilityNode, actor: Actor, inPopup: Boolean, tilePriority: Int = 0) {
-            entries.add(Entry(AccessibleEntry(node, actor), inPopup, tilePriority))
+            entries.add(Entry(AccessibleEntry(node, actor, inPopup), inPopup, tilePriority))
         }
 
         private fun emitButton(actor: Actor, rawText: CharSequence, inPopup: Boolean) {
             val bounds = stageBounds(actor) ?: return
             collectDescendantText(actor)
-            val text = stripMarkup(rawText)
+            val text = stripMarkup(rawText).ifEmpty { ancestorLabel(actor) ?: "" }
             addNode(
                 AccessibilityNode(
                     id = -1,
                     text = text.ifEmpty { "Button" },
-                    hint = if (text.isEmpty()) "Double tap to activate" else "Double tap to activate",
+                    hint = "Double tap to activate",
                     role = AccessibilityRole.Button,
                     bounds = bounds,
                     clickable = true,
@@ -376,7 +394,7 @@ object AccessibilitySnapshot {
 
         private fun emitMaybeIconButton(actor: Image, inPopup: Boolean) {
             if (!hasClick(actor)) return
-            val label = AccessibilityLabels.inferLabel(actor) ?: ""
+            val label = ancestorLabel(actor) ?: ""
             val bounds = stageBounds(actor) ?: return
             consumed.add(actor)
             addNode(
@@ -399,7 +417,7 @@ object AccessibilitySnapshot {
             // Plain containers whose children already cover the content shouldn't double up
             if (actor is Group && actor.children.size > 0) return false
             val bounds = stageBounds(actor) ?: return false
-            val label = AccessibilityLabels.inferLabel(actor) ?: ""
+            val label = ancestorLabel(actor) ?: ""
             consumed.add(actor)
             addNode(
                 AccessibilityNode(

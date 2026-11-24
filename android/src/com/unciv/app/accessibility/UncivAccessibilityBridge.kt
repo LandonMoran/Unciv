@@ -131,12 +131,21 @@ class UncivAccessibilityBridge(
     private inner class UncivExploreHelper(host: View) : ExploreByTouchHelper(host) {
         private var entries: List<AccessibleEntry> = emptyList()
         private val viewBounds = HashMap<Int, Rect>()
+        private var hadPopup = false
 
         fun update(
             newEntries: List<AccessibleEntry>,
             stageWidth: Float,
             stageHeight: Float
         ) {
+            val hasPopup = newEntries.any { it.isPopup }
+            // A freshly opened dialog should grab TalkBack focus so the user
+            // lands inside it instead of behind it. Only on closed -> open
+            // transitions, never on refreshes while a dialog is already up.
+            val focusPopupId = if (hasPopup && !hadPopup)
+                newEntries.firstOrNull { it.isPopup }?.node?.id
+            else null
+            hadPopup = hasPopup
             entries = newEntries
             viewBounds.clear()
             val viewWidth = gameView.width
@@ -155,6 +164,10 @@ class UncivAccessibilityBridge(
                 }
             }
             invalidateRoot()
+            if (focusPopupId != null && focusPopupId != INVALID_ID) {
+                // Let the new node list settle before moving focus into the dialog
+                gameView.post { requestKeyboardFocusForVirtualView(focusPopupId) }
+            }
         }
 
         override fun getVirtualViewAt(x: Float, y: Float): Int {
