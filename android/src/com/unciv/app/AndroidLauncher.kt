@@ -75,6 +75,7 @@ open class AndroidLauncher : AndroidApplication() {
         // or whatever your game id is
         game!!.setDeepLinkedGame(intent)
         game!!.addScreenObscuredListener()
+        game!!.setupTalkBackBridge()
         processPossibleFriendDeepLink(intent)
     }
 

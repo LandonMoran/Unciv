@@ -70,6 +70,14 @@ class MinimapHolder(val mapHolder: WorldMapHolder) : Table() {
         improvementsImageButton
     )
 
+    init {
+        com.unciv.ui.accessibility.AccessibilityLabels.setLabel(movementsImageButton, "Toggle unit movement overlay")
+        com.unciv.ui.accessibility.AccessibilityLabels.setLabel(yieldImageButton, "Toggle tile yield icons")
+        com.unciv.ui.accessibility.AccessibilityLabels.setLabel(populationImageButton, "Toggle worked tiles overlay")
+        com.unciv.ui.accessibility.AccessibilityLabels.setLabel(resourceImageButton, "Toggle resource icons")
+        com.unciv.ui.accessibility.AccessibilityLabels.setLabel(improvementsImageButton, "Toggle improvements overlay")
+    }
+
     private fun rebuildIfStale(civInfo: Civilization) {
         // For Spectator should not restrict minimap
         val civ: Civilization? = civInfo.takeUnless { worldScreen.selectedGameView.spectatorMode }

@@ -163,6 +163,8 @@ class GameSettings {
 
     var androidCutout = false
     var androidHideSystemUi = true
+    /** Expose the UI to Android screen readers (e.g. TalkBack) as natively focusable elements */
+    var screenReaderSupport = true
     var fontFamilyData: FontFamilyData = FontFamilyData.default
     var fontSizeMultiplier: Float = 1f
     var longPressDelay = 1.1f

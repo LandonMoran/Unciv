@@ -28,6 +28,7 @@ ktxCore = "1.17.0"
 #Be careful raising this. May raise minSdk, compileSdk or targetJvm dependencies. Do no only run unit tests, build an apk as well. Problems will mention androidx.work.
 ktxRuntime = "2.10.3"
 desugar = "2.1.5"
+customview = "1.2.0"
 
 androidxCollection = "1.4.5"
 
@@ -80,6 +81,7 @@ androidx-collection = { group = "androidx.collection", name = "collection", vers
 android-ktx-core = { group = "androidx.core", name = "core-ktx", version.ref = "ktxCore" }
 android-desugar = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar" }
 android-ktx-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "ktxRuntime" }
+android-customview = { group = "androidx.customview", name = "customview", version.ref = "customview" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 mockito = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }

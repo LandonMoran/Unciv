@@ -14,6 +14,7 @@ import com.badlogic.gdx.math.Rectangle
 import com.unciv.UncivGame
 import com.unciv.logic.IdChecker
 import com.unciv.logic.event.EventBus
+import com.unciv.app.accessibility.UncivAccessibilityBridge
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.UncivStage
 import com.unciv.utils.Concurrency
@@ -86,6 +87,13 @@ class AndroidGame(private val activity: Activity) : UncivGame() {
             if (idParam != null && idParam.isUUID()) idParam
             else if (IdChecker.isGameDeepLink(uri.toString())) IdChecker.checkAndReturnUuiId(uri.toString())
             else null
+    }
+
+    /** Attach the TalkBack screen-reader bridge to the game view. Safe to call even when no
+     *  screen reader is running - the bridge stays idle until touch exploration is enabled. */
+    fun setupTalkBackBridge() {
+        val gameView = (Gdx.graphics as AndroidGraphics).view
+        UncivAccessibilityBridge(gameView, this).attach()
     }
 
     fun isInitializedProxy() = super.isInitialized

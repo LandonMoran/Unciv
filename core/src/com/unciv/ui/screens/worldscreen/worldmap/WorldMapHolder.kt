@@ -32,6 +32,8 @@ import com.unciv.ui.components.MiscArrowTypes
 import com.unciv.ui.components.extensions.center
 import com.unciv.ui.components.extensions.isShiftKeyPressed
 import com.unciv.ui.components.extensions.surroundWithCircle
+import com.unciv.ui.accessibility.AccessibilityAnnouncer
+import com.unciv.ui.accessibility.TileDescription
 import com.unciv.ui.components.input.*
 import com.unciv.ui.components.tilegroups.TileGroup
 import com.unciv.ui.components.tilegroups.TileGroupMap
@@ -165,6 +167,10 @@ class WorldMapHolder(
     }
 
     fun onTileClicked(tileView: TileView) {
+        try {
+            val description = TileDescription.describe(tileView, worldScreen.selectedGameView.civView)
+            AccessibilityAnnouncer.announce(description, UncivSound.TalkBackSelect)
+        } catch (_: Throwable) {}
         removeUnitActionOverlay()
         selectedTile = tileView
         unitMovementPaths.clear()
@@ -273,6 +279,7 @@ class WorldMapHolder(
                 if (!unitView.tryMovePreparingAttack(attackableTile)) return
                 if (!SoundPlayer.play(UncivSound(attackerCombatant.getCombatantName())))
                     SoundPlayer.play(attackerCombatant.getAttackSound())
+                try { AccessibilityAnnouncer.announce("Attacking", UncivSound.TalkBackAttack) } catch (_: Throwable) {}
                 val (damageToDefender, damageToAttacker) = unitView.attackOrNuke(attackableTile)
                 val defenderCombatant = attackableTile.getCombatant()
                 if (defenderCombatant != null)
@@ -293,6 +300,7 @@ class WorldMapHolder(
     }
 
     internal fun moveUnitToTargetTile(selectedUnits: List<MapUnitView>, targetTileView: TileView) {
+        try { AccessibilityAnnouncer.announce("Moving", UncivSound.TalkBackMove) } catch (_: Throwable) {}
         // this can take a long time, because of the unit-to-tile calculation needed, so we put it in a different thread
         // THIS PART IS REALLY ANNOYING
         // So lets say you have 2 units you want to move in the same direction, right

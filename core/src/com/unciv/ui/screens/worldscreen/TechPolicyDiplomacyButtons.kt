@@ -17,6 +17,7 @@ import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.fonts.Fonts
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.onActivation
+import com.unciv.ui.accessibility.AccessibilityLabels
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.diplomacyscreen.DiplomacyScreen
@@ -74,22 +75,26 @@ class TechPolicyDiplomacyButtons(val worldScreen: WorldScreen) : Table(BaseScree
             game.pushScreen { TechPickerScreen(viewingCiv.getCiv()) }
         }
 
+        AccessibilityLabels.setLabel(undoButton, "Undo")
         undoButton.add(ImageGetter.getImage("OtherIcons/Undo")).size(30f).pad(15f)
         undoButton.onActivation(binding = KeyboardBinding.Undo) {
             handleUndo()
         }
 
+        AccessibilityLabels.setLabel(policyScreenButton, "Social Policies")
         policyScreenButton.add(ImageGetter.getImage("OtherIcons/Policies")).size(30f).pad(15f)
         policyButtonHolder.onActivation(binding = KeyboardBinding.SocialPolicies) {
             game.pushScreen { PolicyPickerScreen(worldScreen.selectedCiv, worldScreen.canChangeState) }
         }
 
+        AccessibilityLabels.setLabel(diplomacyButton, "Diplomacy")
         diplomacyButton.add(ImageGetter.getImage("OtherIcons/DiplomacyW")).size(30f).pad(15f)
         diplomacyButtonHolder.onActivation(binding = KeyboardBinding.Diplomacy) {
             game.pushScreen { DiplomacyScreen(worldScreen.selectedGameView.civView) }
         }
 
         if (game.gameInfo!!.isEspionageEnabled()) {
+            AccessibilityLabels.setLabel(espionageButton, "Espionage")
             espionageButton.add(ImageGetter.getImage("OtherIcons/Espionage")).size(30f).pad(15f)
             espionageButtonHolder.onActivation(binding = KeyboardBinding.Espionage) {
                 // We want to make sure to deselect a spy in the case that the player wants to cancel moving

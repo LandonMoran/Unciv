@@ -19,6 +19,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.GUI
+import com.unciv.UncivGame
 import com.unciv.logic.event.EventBus
 import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.center
@@ -252,6 +253,7 @@ open class Popup(
     private fun show() {
         this.isVisible = true
         for (listener in showListeners) listener()
+        if (UncivGame.isCurrentInitialized()) UncivGame.Current.notifyAccessibilityContentChanged()
     }
 
     /**
@@ -261,6 +263,7 @@ open class Popup(
         events.stopReceiving()
         for (listener in closeListeners) listener()
         remove()
+        if (UncivGame.isCurrentInitialized()) UncivGame.Current.notifyAccessibilityContentChanged()
         val nextPopup = stageToShowOn.actors.firstOrNull { it is Popup }
         if (nextPopup != null) (nextPopup as Popup).show()
     }

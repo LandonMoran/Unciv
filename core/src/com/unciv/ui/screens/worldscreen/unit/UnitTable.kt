@@ -18,6 +18,7 @@ import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.images.padTopDescent
+import com.unciv.ui.accessibility.AccessibilityAnnouncer
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.ui.screens.worldscreen.unit.presenter.CityPresenter
@@ -146,6 +147,17 @@ class UnitTable(val worldScreen: WorldScreen) : Table() {
         presenter = if (unitView != null) unitPresenter else summaryPresenter
         unitPresenter.selectUnit(unitView, append)
         resetUnitTable()
+        if (unitView != null) {
+            try {
+                val moves = unitView.currentMovement
+                val movesText = if (moves <= 0.05f) "no moves left"
+                    else "${if (moves == moves.toInt().toFloat()) moves.toInt().toString() else "%.1f".format(moves)} moves left"
+                AccessibilityAnnouncer.announce(
+                    "${unitView.displayName()} selected, $movesText",
+                    com.unciv.models.UncivSound.TalkBackSelect
+                )
+            } catch (_: Throwable) {}
+        }
     }
 
     fun selectSpy(spyView: SpyView?) {
@@ -159,6 +171,9 @@ class UnitTable(val worldScreen: WorldScreen) : Table() {
         return cityPresenter.selectCity(city).also {
             resetUnitTable()
             worldScreen.shouldUpdate = true
+            try {
+                AccessibilityAnnouncer.announce("${city.name}, your city selected", com.unciv.models.UncivSound.TalkBackCity)
+            } catch (_: Throwable) {}
         }
     }
 

@@ -8,6 +8,7 @@ import com.unciv.ui.components.extensions.pad
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
+import com.unciv.ui.accessibility.AccessibilityLabels
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.worldscreen.worldmap.WorldMapHolder
 import com.unciv.view.MapUnitView
@@ -29,6 +30,7 @@ class IdleUnitButton (
             image.rotateBy(180f)
         }
         add(image).size(imageSize).pad(10f,20f)
+        AccessibilityLabels.setLabel(this, if (previous) "Previous idle unit" else "Next idle unit")
         enable()
         keyShortcuts.add(keyShortcutBind)
         onActivation (binding = keyShortcutBind) {

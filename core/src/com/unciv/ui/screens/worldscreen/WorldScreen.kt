@@ -589,6 +589,12 @@ class WorldScreen(
     fun nextTurn() {
         isPlayersTurn = false
         shouldUpdate = true
+        try {
+            com.unciv.ui.accessibility.AccessibilityAnnouncer.announce(
+                "Ending turn ${gameInfo.turns}, please wait",
+                com.unciv.models.UncivSound.TalkBackTurn
+            )
+        } catch (_: Throwable) {}
         val progressBar = NextTurnProgress(nextTurnButton)
         progressBar.start(this)
 

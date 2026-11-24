@@ -72,6 +72,19 @@ open class UncivGame(val isConsoleMode: Boolean = false) : Game(), PlatformSpeci
     var worldScreen: WorldScreen? = null
         private set
 
+    /** Subscribers are notified (on the GL thread) whenever the visible screen changes.
+     *  Used by platform accessibility bridges (e.g. Android TalkBack support). */
+    val screenChangeListeners = mutableListOf<(BaseScreen) -> Unit>()
+    /** Subscribers are notified (on the GL thread) whenever on-screen content changes -
+     *  screen changes as well as popups opening or closing.
+     *  Used by platform accessibility bridges (e.g. Android TalkBack support). */
+    val accessibilityContentListeners = mutableListOf<() -> Unit>()
+
+    /** Notify [accessibilityContentListeners] that the visible UI changed. */
+    fun notifyAccessibilityContentChanged() {
+        for (listener in accessibilityContentListeners.toList()) listener()
+    }
+
     /** Flag used only during initialization until the end of [create] */
     protected var isInitialized = false
         private set
@@ -248,6 +261,13 @@ open class UncivGame(val isConsoleMode: Boolean = false) : Game(), PlatformSpeci
 
             screenStack.addLast(screenToShow)
             setScreen(screenToShow) // Only here do we set the inputProcessor again 
+            try {
+                val civName = newGameInfo.getPlayerToViewAs().civName
+                com.unciv.ui.accessibility.AccessibilityAnnouncer.announce(
+                    "Turn ${newGameInfo.turns}, $civName. ${if (isSingleplayer) "Your turn" else "Waiting for players"}",
+                    com.unciv.models.UncivSound.TalkBackTurn
+                )
+            } catch (_: Throwable) {}
             loadingScreen.dispose()
 
             return@withGLContext newWorldScreen
@@ -290,6 +310,8 @@ open class UncivGame(val isConsoleMode: Boolean = false) : Game(), PlatformSpeci
             newScreen.shouldUpdate = true
         }
         Gdx.graphics.requestRendering()
+        for (listener in screenChangeListeners.toList()) listener(newScreen)
+        notifyAccessibilityContentChanged()
     }
 
     /** Removes & [disposes][BaseScreen.dispose] all currently active screens in the [screenStack] and sets the given screen as the only screen. */

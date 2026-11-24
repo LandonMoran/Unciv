@@ -70,6 +70,9 @@ internal class AdvancedTab(
         if (Display.hasSystemUiVisibility())
             addHideSystemUiCheckbox()
 
+        if (Gdx.app.type == Application.ApplicationType.Android)
+            addCheckbox("Screen reader (TalkBack) support", settings::screenReaderSupport)
+
         addFontFamilySelect()
         addFontSizeMultiplier()
 
