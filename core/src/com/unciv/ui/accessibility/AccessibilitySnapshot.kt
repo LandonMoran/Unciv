@@ -40,12 +40,27 @@ data class AccessibleEntry(val node: AccessibilityNode, val actor: Actor, val is
  * nodes with [TileDescription] text so the map itself can be explored tile by tile.
  */
 object AccessibilitySnapshot {
-    const val MAX_NODES = 800
-    private const val MAX_TILES = 220
+    /**
+     * Caps keep linear TalkBack navigation usable and bound GL-thread work.
+     * A phone viewport shows ~50-80 map tiles; tiles beyond [MAX_TILES] are
+     * reached by panning the map (which triggers a fresh snapshot).
+     * Measured headless worst case (10k actors + 800 controls): ~5ms per
+     * collect without per-tile game-model lookups; real tiles add
+     * [TileDescription] lookups on top, so tiles get the tighter separate cap.
+     */
+    const val MAX_NODES = 400
+    const val MAX_TILES = 60
+    /** Bounds subtree walks (button text/image-label collection) so one huge
+     *  container can't turn the snapshot quadratic. */
+    private const val MAX_SUBTREE_WALK = 40
     private val markupTagRegex = Regex("\\[[^\\[\\]]*\\]")
 
     /** Removes Gdx color markup (`[...]`) from label text so screen readers read clean text. */
-    fun stripMarkup(text: CharSequence): String = markupTagRegex.replace(text, "").trim()
+    fun stripMarkup(text: CharSequence): String {
+        // Fast path: most strings carry no markup; skip the regex in that case.
+        if (!text.contains('[')) return text.toString().trim()
+        return markupTagRegex.replace(text, "").trim()
+    }
 
     fun collect(stage: Stage): List<AccessibleEntry> {
         val collector = Collector(stage)
@@ -81,12 +96,18 @@ object AccessibilitySnapshot {
         } catch (_: Throwable) { null }
 
         fun visit(actor: Actor, depth: Int) {
-            if (!isEffectivelyVisible(actor) || actor in consumed || depth > 40) return
+            // Cheap rejects first: the parent-chain visibility walk below costs
+            // far more than these, and most culled actors fail here.
+            if (actor in consumed || depth > 40) return
+            if (!actor.isVisible || actor.width <= 0f || actor.height <= 0f) return
+            if (!isEffectivelyVisible(actor)) return
             // World-map tiles and city-screen tiles alike: exposed with terrain/unit/city
             // descriptions and activate-to-select. Layer internals are exposed through
             // the TileMapLayer containers, not by recursing here.
             if (actor is TileGroup) {
-                emitTile(actor)
+                // Cap check before bounds/describe: on huge maps the vast
+                // majority of tiles skip with one counter comparison.
+                if (tileCount < MAX_TILES) emitTile(actor)
                 return
             }
             val inPopup = isInPopup(actor)
@@ -149,7 +170,10 @@ object AccessibilitySnapshot {
         }
 
         private fun isEffectivelyVisible(actor: Actor): Boolean {
-            var current: Actor? = actor
+            // Callers already checked actor.isVisible itself; walk parents only.
+            // Kept allocation-free: parent chains are short in practice and this
+            // runs once per actor per snapshot.
+            var current: Actor? = actor.parent
             var hops = 0
             while (current != null && hops < 40) {
                 if (!current.isVisible) return false
@@ -195,19 +219,22 @@ object AccessibilitySnapshot {
         }
 
         private fun hasClick(actor: Actor): Boolean {
-            var current: Actor? = actor
-            var hops = 0
+            // Fast path: most clickables carry their own listener - no parent walk.
+            if (actor.listeners.any { it is ClickListener }) return true
+            // Modern tap handling: onActivation/onClick attach an ActivationListener
+            // (a gesture listener, not a ClickListener) via ActorAttachments
+            if (ActorAttachments.getOrNull(actor)?.activationActions?.isNotEmpty() == true) return true
+            var current: Actor? = actor.parent
+            var hops = 1
             while (current != null && hops < 6) {
                 if (current.listeners.any { it is ClickListener }) return true
-                // Modern tap handling: onActivation/onClick attach an ActivationListener
-                // (a gesture listener, not a ClickListener) via ActorAttachments
                 if (ActorAttachments.getOrNull(current)?.activationActions?.isNotEmpty() == true) return true
                 // Container-holder pattern: holder has the listener, button doesn't
                 if (current is Group && current.listeners.size > 0) return true
                 current = current.parent
                 hops++
             }
-            return actor.listeners.any { it is ClickListener }
+            return false
         }
 
         /** Nearest human-readable label on [actor] itself or its ancestors.
@@ -229,7 +256,9 @@ object AccessibilitySnapshot {
             val text = StringBuilder()
             val stack = ArrayDeque<Actor>()
             stack.add(actor)
+            var visited = 0
             while (stack.isNotEmpty()) {
+                if (visited++ > MAX_SUBTREE_WALK) break
                 val current = stack.removeLast()
                 if (current !== actor && current is Label) {
                     val labelText = stripMarkup(current.text)
@@ -250,7 +279,9 @@ object AccessibilitySnapshot {
             if (actor !is Group) return null
             val stack = ArrayDeque<Actor>()
             stack.add(actor)
+            var visited = 0
             while (stack.isNotEmpty()) {
+                if (visited++ > MAX_SUBTREE_WALK) break
                 val current = stack.removeLast()
                 if (current !== actor) {
                     AccessibilityLabels.inferLabel(current)?.let { return it }

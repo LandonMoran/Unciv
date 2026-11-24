@@ -49,6 +49,7 @@ class UncivAccessibilityBridge(
 ) {
     private val helper = UncivExploreHelper(gameView)
     private var lastSnapshotMs = 0L
+    private var snapshotPending = false
     private var lastScreenTitle = "Unciv"
 
     fun attach() {
@@ -110,7 +111,12 @@ class UncivAccessibilityBridge(
             return
         }
         lastSnapshotMs = now
+        // Coalesce bursts (turn start fires several content events): only one
+        // collect() runs per throttle window; the latest stage state wins.
+        if (snapshotPending) return
+        snapshotPending = true
         Gdx.app.postRunnable {
+            snapshotPending = false
             val stage = (game.screen as? BaseScreen)?.stage ?: return@postRunnable
             val entries = AccessibilitySnapshot.collect(stage)
             val stageWidth = stage.width
@@ -130,6 +136,7 @@ class UncivAccessibilityBridge(
 
     private inner class UncivExploreHelper(host: View) : ExploreByTouchHelper(host) {
         private var entries: List<AccessibleEntry> = emptyList()
+        private val entryById = HashMap<Int, AccessibleEntry>()
         private val viewBounds = HashMap<Int, Rect>()
         private var hadPopup = false
 
@@ -147,6 +154,8 @@ class UncivAccessibilityBridge(
             else null
             hadPopup = hasPopup
             entries = newEntries
+            entryById.clear()
+            for (e in newEntries) entryById[e.node.id] = e
             viewBounds.clear()
             val viewWidth = gameView.width
             val viewHeight = gameView.height
@@ -170,24 +179,27 @@ class UncivAccessibilityBridge(
             }
         }
 
-                    override fun getVirtualViewAt(x: Float, y: Float): Int {
-                requestSnapshot()
-                // Entries are ordered popups-first, then top-to-bottom, smallest-first:
-                // forward iteration therefore hits modal dialogs before the map or menu
-                // behind them, and small controls (city buttons) before their tiles.
-                for (entry in entries) {
-                    val id = entry.node.id
-                    if (viewBounds[id]?.contains(x.toInt(), y.toInt()) == true) return id
-                }
-                return INVALID_ID
+        override fun getVirtualViewAt(x: Float, y: Float): Int {
+            // Pure cache read: TalkBack calls this on every hover move, so it
+            // must never schedule GL-thread work. Fresh snapshots arrive via
+            // screen/content/announcement events (throttled below).
+            // Entries are ordered popups-first, then top-to-bottom,
+            // smallest-first: forward iteration hits modal dialogs before the
+            // map or menu behind them, and small controls before their tiles.
+            for (entry in entries) {
+                val id = entry.node.id
+                if (viewBounds[id]?.contains(x.toInt(), y.toInt()) == true) return id
             }
+            return INVALID_ID
+        }
 
         override fun getVisibleVirtualViews(virtualViewIds: MutableList<Int>) {
-            requestSnapshot()
+            // Pure cache read, same as above: TalkBack enumerates often during
+            // linear navigation; rebuilding here caused hover jank.
             for (entry in entries) virtualViewIds.add(entry.node.id)
         }
 
-        private fun entryFor(id: Int) = entries.firstOrNull { it.node.id == id }
+        private fun entryFor(id: Int) = entryById[id]
 
         override fun onPopulateNodeForVirtualView(virtualViewId: Int, node: AccessibilityNodeInfoCompat) {
             val entry = entryFor(virtualViewId)
@@ -340,7 +352,10 @@ class UncivAccessibilityBridge(
     }
 
     companion object {
-        private const val MIN_SNAPSHOT_INTERVAL_MS = 500L
+        // Snapshots run a full stage walk + tile descriptions on the GL thread,
+        // so throttle harder than the ~500ms hover cadence: hover/enumeration
+        // now read the cache and never rebuild (see above).
+        private const val MIN_SNAPSHOT_INTERVAL_MS = 1000L
 
         private fun classNameFor(role: AccessibilityRole): String = when (role) {
             AccessibilityRole.Button -> "android.widget.Button"
