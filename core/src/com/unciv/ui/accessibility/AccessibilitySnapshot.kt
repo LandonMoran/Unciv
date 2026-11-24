@@ -56,6 +56,8 @@ object AccessibilitySnapshot {
             compareByDescending<Collector.Entry> { it.tilePriority }
                 .thenByDescending { it.entry.node.bounds.y + it.entry.node.bounds.height }
                 .thenBy { it.entry.node.bounds.x }
+                // Smaller controls win hit-testing ties (e.g. a city button over its tile)
+                .thenBy { it.entry.node.bounds.width * it.entry.node.bounds.height }
         )
         val combined = (popupEntries + sortedMain).take(MAX_NODES)
         return combined.mapIndexed { index, entry ->

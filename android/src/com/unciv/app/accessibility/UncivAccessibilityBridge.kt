@@ -170,14 +170,17 @@ class UncivAccessibilityBridge(
             }
         }
 
-        override fun getVirtualViewAt(x: Float, y: Float): Int {
-            requestSnapshot()
-            for (index in entries.indices.reversed()) {
-                val id = entries[index].node.id
-                if (viewBounds[id]?.contains(x.toInt(), y.toInt()) == true) return id
+                    override fun getVirtualViewAt(x: Float, y: Float): Int {
+                requestSnapshot()
+                // Entries are ordered popups-first, then top-to-bottom, smallest-first:
+                // forward iteration therefore hits modal dialogs before the map or menu
+                // behind them, and small controls (city buttons) before their tiles.
+                for (entry in entries) {
+                    val id = entry.node.id
+                    if (viewBounds[id]?.contains(x.toInt(), y.toInt()) == true) return id
+                }
+                return INVALID_ID
             }
-            return INVALID_ID
-        }
 
         override fun getVisibleVirtualViews(virtualViewIds: MutableList<Int>) {
             requestSnapshot()
