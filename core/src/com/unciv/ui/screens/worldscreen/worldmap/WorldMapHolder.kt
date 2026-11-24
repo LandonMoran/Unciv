@@ -33,6 +33,7 @@ import com.unciv.ui.components.extensions.center
 import com.unciv.ui.components.extensions.isShiftKeyPressed
 import com.unciv.ui.components.extensions.surroundWithCircle
 import com.unciv.ui.accessibility.AccessibilityAnnouncer
+import com.unciv.ui.accessibility.AccessibilityLabels
 import com.unciv.ui.accessibility.TileDescription
 import com.unciv.ui.components.input.*
 import com.unciv.ui.components.tilegroups.TileGroup
@@ -561,6 +562,7 @@ class WorldMapHolder(
             unitIconGroup.circle.color = Color.GRAY.cpy().apply { a = 0.5f }
             if (!unitView.hasMovement()) unitIconGroup.color.a = 0.66f
             val clickableCircle = ClickableCircle(68f)
+            AccessibilityLabels.setLabel(clickableCircle, "Select ${unitView.displayName()}")
             clickableCircle.onClickSuppressive {
                 worldScreen.bottomUnitTable.selectUnit(unitView, Gdx.input.isShiftKeyPressed())
                 worldScreen.shouldUpdate = true

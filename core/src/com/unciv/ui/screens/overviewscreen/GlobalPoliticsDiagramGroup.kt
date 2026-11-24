@@ -16,6 +16,8 @@ import com.unciv.logic.civilization.diplomacy.DiplomaticModifiers
 import com.unciv.logic.civilization.diplomacy.DiplomaticStatus
 import com.unciv.logic.civilization.diplomacy.RelationshipLevel
 import com.unciv.logic.map.HexMath
+import com.unciv.models.translations.tr
+import com.unciv.ui.accessibility.AccessibilityLabels
 import com.unciv.ui.components.UncivTooltip.Companion.addTooltip
 import com.unciv.ui.components.extensions.center
 import com.unciv.ui.components.extensions.getContrastRatio
@@ -233,6 +235,7 @@ class GlobalPoliticsDiagramGroup(
         // An Image Actor does not respect alpha for its hit area, it's always square, but we want a clickable _circle_
         // Radius to show legend should be no larger than freeSize / 2.25f - 15f (see above), let's make it a little smaller
         val clickableArea = ClickableCircle(freeSize / 1.25f - 25f)
+        AccessibilityLabels.setLabel(clickableArea, "Legend".tr())
         clickableArea.onActivation {
             DiagramLegendPopup(stage, this)
         }
