@@ -7,10 +7,13 @@ import com.unciv.models.UncivSound
 internal class ActorAttachments private constructor(actor: Actor) {
     companion object {
         fun getOrNull(actor: Actor): ActorAttachments? {
-            return actor.userObject as ActorAttachments?
+            // Safe cast: Actors sometimes carry a foreign userObject (platform
+            // code, widgets); an unsafe cast would crash the GL thread.
+            return actor.userObject as? ActorAttachments
         }
 
         fun get(actor: Actor): ActorAttachments {
+            (actor.userObject as? ActorAttachments)?.let { return it }
             if (actor.userObject == null)
                 actor.userObject = ActorAttachments(actor)
             return getOrNull(actor)!!

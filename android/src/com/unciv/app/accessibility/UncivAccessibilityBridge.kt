@@ -53,6 +53,7 @@ class UncivAccessibilityBridge(
     private var lastScreenTitle = "Unciv"
 
     fun attach() {
+        try {
         ViewCompat.setAccessibilityDelegate(gameView, helper)
         gameView.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
         game.screenChangeListeners.add { screen -> onScreenChanged(screen) }
@@ -61,6 +62,9 @@ class UncivAccessibilityBridge(
             onExplicitAnnouncement(announcement.message, announcement.earcon)
         }
         onContentChanged()
+        } catch (_: Throwable) {
+            // The accessibility bridge must never kill the game on startup.
+        }
     }
 
     private fun onExplicitAnnouncement(message: String, earcon: com.unciv.models.UncivSound) {
@@ -118,7 +122,12 @@ class UncivAccessibilityBridge(
         Gdx.app.postRunnable {
             snapshotPending = false
             val stage = (game.screen as? BaseScreen)?.stage ?: return@postRunnable
-            val entries = AccessibilitySnapshot.collect(stage)
+            val entries = try {
+                AccessibilitySnapshot.collect(stage)
+            } catch (_: Throwable) {
+                // A snapshot bug must never crash the GL thread; skip this refresh.
+                return@postRunnable
+            }
             val stageWidth = stage.width
             val stageHeight = stage.height
             gameView.post {
